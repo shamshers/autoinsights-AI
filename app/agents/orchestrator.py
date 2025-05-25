@@ -15,6 +15,8 @@ class OrchestratorAgent(AgentBase):
         for agent in self.agents:
             try:
                 state = agent.run(state)
+                print("✅ Agents Registered:", [a.__class__.__name__ for a in self.agents])
+
             except Exception as e:
                 print(f"Error in {agent.__class__.__name__}: {e}")   # Add this line
                 state['error'] = f"{agent.__class__.__name__} failed: {str(e)}"

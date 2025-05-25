@@ -1,48 +1,49 @@
-from .agent_base import AgentBase
+# app/agents/visualization_agent.py
+
+from app.agents.agent_base import AgentBase
 import pandas as pd
 import matplotlib.pyplot as plt
+import os
+import uuid
 
 class VisualizationAgent(AgentBase):
-    """
-    Agent for automated charting (bar chart of first categorical vs first numeric column).
-    """
+    order = 4
+
     def run(self, state):
+        df = state.get("cleaned_df")
 
-
-        df = state.get('data')
-        if df is None or not isinstance(df, pd.DataFrame):
-            raise ValueError("VisualizationAgent: No DataFrame found in state.")
-
-        # Identify columns
-        cat_col = None
-        num_col = None
-        for col in df.columns:
-            if pd.api.types.is_numeric_dtype(df[col]) and num_col is None:
-                num_col = col
-            elif not pd.api.types.is_numeric_dtype(df[col]) and cat_col is None:
-                cat_col = col
-            if cat_col and num_col:
-                break
-
-        if not (cat_col and num_col):
-            print("VisualizationAgent: Not enough column types for plotting (need one categorical, one numeric).")
-            state['visualization_status'] = 'skipped'
+        if df is None or df.empty:
+            print("[VisualizationAgent] ❌ No DataFrame found in state.")
+            state["visualization_status"] = "No data available for charts."
+            state["chart_path"] = None
             return state
 
-        # Make bar chart
-        plt.figure(figsize=(6, 4))
         try:
-            df.groupby(cat_col)[num_col].mean().plot(kind='bar')
-            plt.title(f"Average {num_col} by {cat_col}")
+            numeric_columns = df.select_dtypes(include='number').columns.tolist()
+
+            if not numeric_columns:
+                print("[VisualizationAgent] ❌ No numeric columns for plotting.")
+                state["visualization_status"] = "No numeric data to visualize."
+                return state
+
+            plt.figure(figsize=(10, 6))
+            df[numeric_columns].plot(kind='bar')
+            plt.title("Auto Insights - Bar Chart of Numeric Columns")
             plt.tight_layout()
-            chart_path = "data/sample_datasets/auto_chart.png"
-            plt.savefig(chart_path)
+
+            output_dir = "outputs/charts"
+            os.makedirs(output_dir, exist_ok=True)
+            chart_file = os.path.join(output_dir, f"chart_{uuid.uuid4().hex[:6]}.png")
+
+            plt.savefig(chart_file)
             plt.close()
-            state['chart_path'] = chart_path
-            state['visualization_status'] = 'success'
-            print(f"VisualizationAgent: Saved bar chart as {chart_path}.")
+
+            print(f"[VisualizationAgent] ✅ Chart saved to: {chart_file}")
+            state["chart_path"] = chart_file
+            state["visualization_status"] = "Chart generated."
         except Exception as e:
-            print(f"VisualizationAgent: Plotting error: {e}")
-            state['visualization_status'] = 'failed'
-            state['visualization_error'] = str(e)
+            print(f"[VisualizationAgent] ❌ Plot error: {e}")
+            state["visualization_status"] = f"Plotting error: {e}"
+            state["chart_path"] = None
+
         return state

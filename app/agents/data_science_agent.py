@@ -1,22 +1,24 @@
-from .agent_base import AgentBase
+# app/agents/data_science_agent.py
+
+from app.agents.agent_base import AgentBase
 
 class DataScienceAgent(AgentBase):
-    """
-    Agent for data exploration and (optionally) basic modeling.
-    """
+    order = 3
+
     def run(self, state):
-        import pandas as pd
-        df = state.get('data')
-        if df is None or not isinstance(df, pd.DataFrame):
-            raise ValueError("DataScienceAgent: No DataFrame found in state.")
+        df = state.get("cleaned_df")
 
-        # EDA: summary stats
-        stats = df.describe(include='all').to_dict()
-        state['eda_stats'] = stats
+        if df is None or df.empty:
+            print("[DataScienceAgent] ❌ No DataFrame found in state.")
+            state["eda_stats"] = "No data to analyze."
+            return state
 
-        # (Optional) Simple model placeholder
-        # You can extend this to fit a regression/classification later
+        # Simple stats for example
+        try:
+            state["eda_stats"] = df.describe(include='all').to_dict()
+            print("[DataScienceAgent] ✅ EDA stats generated.")
+        except Exception as e:
+            print(f"[DataScienceAgent] ❌ EDA error: {e}")
+            state["eda_stats"] = f"EDA error: {str(e)}"
 
-        state['data_science_status'] = 'success'
-        print("DataScienceAgent: Generated summary statistics.")
         return state

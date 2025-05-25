@@ -3,7 +3,6 @@ from fastapi.responses import FileResponse, JSONResponse
 from typing import Optional
 import pandas as pd
 import tempfile, os, json
-
 from app.api.utils import clean_json
 from app.services.history_service import history_service
 from app.agents.orchestrator import OrchestratorAgent
@@ -18,6 +17,7 @@ from fpdf import FPDF
 router = APIRouter()
 
 
+
 # --- Analyze endpoint with user and timestamp ---
 @router.post("/analyze/")
 async def analyze_data(
@@ -30,6 +30,7 @@ async def analyze_data(
     with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
         tmp.write(await file.read())
         tmp_path = tmp.name
+        print(f"[analyze] File saved to: {tmp_path}, Exists: {os.path.exists(tmp_path)}")
 
     try:
         pipeline = OrchestratorAgent([
@@ -42,6 +43,8 @@ async def analyze_data(
         ])
         init_state = {"file_path": tmp_path, "user_query": user_query}
         result = pipeline.run(init_state)
+        if not result.get("genai_summary"):
+            result["genai_summary"] = "❌ Summary was not generated."
         result['original_file_name'] = file.filename
         analysis_id = history_service.save(result, user=user)
         result["analysis_id"] = analysis_id
@@ -67,6 +70,12 @@ async def list_history():
             "original_file_name": v.get("original_file_name"),
             "timestamp": v.get("timestamp"),
             "user": v.get("user", "guest"),
+
+            "genai_summary": "AI insights here...",
+            "langchain_response": "Structured answer...",
+            "eda_stats": {...},
+            "chart_path": "/outputs/charts/chart_xyz.png",
+            "visualization_status": "Chart generated."
         }
         for k, v in store.items()
     ]

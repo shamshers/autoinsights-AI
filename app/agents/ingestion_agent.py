@@ -1,43 +1,36 @@
 # app/agents/ingestion_agent.py
 
 import pandas as pd
-from typing import Dict
-from app.agents.agent_base import  AgentBase
+from app.agents.agent_base import AgentBase
 import os
 
 class IngestionAgent(AgentBase):
-    """
-    Enterprise-grade agent for robust data ingestion.
-    Supports CSV, Excel; handles errors and schema validation.
-    """
-    SUPPORTED_FORMATS = ['.csv', '.xlsx', '.xls']
+    order = 1
 
     def run(self, state):
-        file_path = state.get('file_path')
-        if not file_path:
-            raise ValueError("IngestionAgent: No file_path provided in state.")
-
-        ext = os.path.splitext(file_path)[-1].lower()
-        if ext not in self.SUPPORTED_FORMATS:
-            raise ValueError(f"IngestionAgent: Unsupported file type: {ext}")
+        print(f"[IngestionAgent] file_path from state: {state.get('file_path')}")
+        file_path = state.get("file_path")
+        print(f"[IngestionAgent] Received file_path: {file_path}")
 
         try:
-            if ext == '.csv':
+            if not file_path or not os.path.exists(file_path):
+                raise FileNotFoundError("file_path is missing or does not exist.")
+
+            if file_path.endswith(".csv"):
                 df = pd.read_csv(file_path)
-            else:
+            elif file_path.endswith((".xls", ".xlsx")):
                 df = pd.read_excel(file_path)
+            else:
+                raise ValueError("Unsupported file format")
+
+            if df.empty:
+                raise ValueError("Uploaded file contains no data.")
+
+            print(f"[IngestionAgent] Loaded DataFrame with shape: {df.shape}")
+            state["raw_df"] = df
         except Exception as e:
-            raise RuntimeError(f"IngestionAgent: Error reading file: {e}")
+            print(f"[IngestionAgent] ❌ Error: {e}")
+            state["raw_df"] = None
+            state["error"] = f"IngestionAgent error: {e}"
 
-        if df.empty:
-            raise ValueError("IngestionAgent: Loaded DataFrame is empty.")
-
-        # Basic schema check (must have at least 2 columns)
-        if df.shape[1] < 2:
-            raise ValueError("IngestionAgent: Data must have at least 2 columns.")
-
-        state['data'] = df
-        state['ingestion_status'] = 'success'
-        state['columns'] = list(df.columns)
-        print(f"IngestionAgent: Ingested {df.shape[0]} rows, columns: {df.columns.tolist()}")
         return state

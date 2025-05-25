@@ -1,29 +1,35 @@
-from .agent_base import AgentBase
+# app/agents/cleaning_agent.py
+
+from app.agents.agent_base import AgentBase
+import pandas as pd
 
 class CleaningAgent(AgentBase):
-    """
-    Enterprise-grade agent for data cleaning.
-    Handles missing values and duplicate rows.
-    """
+    order = 2
+
     def run(self, state):
-        import pandas as pd
-        df = state.get('data')
-        if df is None or not isinstance(df, pd.DataFrame):
-            raise ValueError("CleaningAgent: No DataFrame found in state.")
+        df = state.get("raw_df")
 
-        original_shape = df.shape
+        if df is None:
+            print("[CleaningAgent] ❌ No raw_df found in state.")
+            state["cleaned_df"] = None
+            return state
 
-        # Remove duplicates
-        df = df.drop_duplicates()
+        print(f"[CleaningAgent] ✅ Received raw_df with shape: {df.shape}")
 
-        # Fill missing values (for demo, fill numeric with 0, categorical with 'unknown')
-        for col in df.columns:
-            if df[col].dtype.kind in 'biufc':
-                df[col].fillna(0, inplace=True)
+        try:
+            df.columns = df.columns.str.strip()
+            df.dropna(how='all', inplace=True)
+
+            if df.empty:
+                print("[CleaningAgent] ❌ DataFrame is empty after cleaning.")
+                state["cleaned_df"] = None
             else:
-                df[col].fillna('unknown', inplace=True)
+                print(f"[CleaningAgent] ✅ Cleaned DataFrame shape: {df.shape}")
+                state["cleaned_df"] = df
 
-        state['data'] = df
-        state['cleaning_status'] = 'success'
-        print(f"CleaningAgent: Cleaned data ({original_shape} -> {df.shape}), missing values handled.")
+        except Exception as e:
+            print(f"[CleaningAgent] ❌ Cleaning error: {e}")
+            state["cleaned_df"] = None
+            state["error"] = f"CleaningAgent error: {str(e)}"
+
         return state

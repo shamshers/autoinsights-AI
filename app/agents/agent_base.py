@@ -1,17 +1,14 @@
-# app/agents/agent_base.py
+# agents/base_agent.py
 
-from abc import ABC, abstractmethod
-from typing import Dict
+class AgentBaseMeta(type):
+    registry = []
 
-class AgentBase(ABC):
-    """
-    Abstract base class for all agents.
-    Each agent processes and returns a 'state' dictionary.
-    """
+    def __new__(cls, name, bases, attrs):
+        new_cls = super(AgentBaseMeta, cls).__new__(cls, name, bases, attrs)
+        if name != "BaseAgent":  # Skip base class itself
+            AgentBaseMeta.registry.append(new_cls)
+        return new_cls
 
-    @abstractmethod
-    def run(self, state: Dict) -> Dict:
-        """
-        Process input state and return updated state.
-        """
-        pass
+class AgentBase(metaclass=AgentBaseMeta):
+    def run(self, state: dict) -> dict:
+        raise NotImplementedError("Each agent must implement `run()`.")
