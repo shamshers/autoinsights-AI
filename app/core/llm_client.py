@@ -12,7 +12,7 @@ class ClaudeClient:
         self.client = anthropic.Anthropic(api_key=api_key)
         self.model = "claude-3-opus-20240229"  # Or "claude-3-sonnet-20240229"
 
-    def generate_summary(self, data_stats, columns, business_question=None):
+    def generate_summary(self, data_stats, columns, business_question=None,rag_context=None):
         prompt = (
             f"You are a business data analyst AI.\n"
             f"Columns: {columns}\n"
@@ -20,6 +20,9 @@ class ClaudeClient:
         )
         if business_question:
             prompt += f"Business question: {business_question}\n"
+        prompt += "Provide a concise, business-friendly summary of insights and patterns."
+        if rag_context:
+            prompt += f"\nRelevant enterprise context:\n{rag_context}\n"
         prompt += "Provide a concise, business-friendly summary of insights and patterns."
 
         response = self.client.messages.create(

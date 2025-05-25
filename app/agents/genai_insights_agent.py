@@ -15,7 +15,8 @@ class GenAIInsightsAgent(AgentBase):
             raise ValueError("GenAIInsightsAgent: Missing EDA stats or columns in state.")
 
         claude = ClaudeClient()
-        summary = claude.generate_summary(stats, columns, business_question=question)
+        rag_context = state.get('rag_context')
+        summary = claude.generate_summary(stats, columns, business_question=question,rag_context=rag_context)
         state['genai_summary'] = summary
         print("GenAIInsightsAgent: Generated AI summary via Claude.")
         return state
