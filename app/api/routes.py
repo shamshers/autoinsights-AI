@@ -15,9 +15,6 @@ from app.agents.rag_retriever_agent import RAGRetrieverAgent
 from fpdf import FPDF
 
 router = APIRouter()
-
-
-
 # --- Analyze endpoint with user and timestamp ---
 @router.post("/analyze/")
 async def analyze_data(
@@ -51,8 +48,7 @@ async def analyze_data(
         resp = {k: result.get(k) for k in [
             "analysis_id", "columns", "eda_stats", "genai_summary", "chart_path",
             "visualization_status", "rag_context", "error", "original_file_name",
-            "timestamp", "user"
-        ]}
+            "timestamp", "user"]}
         return clean_json(resp)
     except Exception as e:
         import traceback
@@ -71,11 +67,11 @@ async def list_history():
             "timestamp": v.get("timestamp"),
             "user": v.get("user", "guest"),
 
-            "genai_summary": "AI insights here...",
-            "langchain_response": "Structured answer...",
-            "eda_stats": {...},
-            "chart_path": "/outputs/charts/chart_xyz.png",
-            "visualization_status": "Chart generated."
+            # "genai_summary": "AI insights here...",
+            # "langchain_response": "Structured answer...",
+            # "eda_stats": {...},
+            # "chart_path": "/outputs/charts/chart_xyz.png",
+            # "visualization_status": "Chart generated."
         }
         for k, v in store.items()
     ]

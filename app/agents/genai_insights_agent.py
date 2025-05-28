@@ -4,6 +4,17 @@ from app.agents.agent_base import AgentBase
 from app.core.llm_client import ClaudeClient
 import pandas as pd
 
+from crewai import Agent
+
+genai_insights_agent = Agent(
+    name="GenAI Agent",
+    role="Insight Generator",
+    goal="Generate human-readable insights from data using LLMs",
+    backstory="A language model whisperer that turns raw data into actionable insights.",
+    verbose=True
+)
+
+
 class GenAIInsightsAgent(AgentBase):
     order = 3  # If you're ordering
 

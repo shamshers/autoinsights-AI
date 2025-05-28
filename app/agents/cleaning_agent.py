@@ -2,6 +2,16 @@
 
 from app.agents.agent_base import AgentBase
 import pandas as pd
+from crewai import Agent
+
+cleaning_agent = Agent(
+    name="Cleaning Agent",
+    role="Data Preprocessing Expert",
+    goal="Clean and preprocess raw data for analysis",
+    backstory="Expert at handling messy datasets, ensuring they are ready for AI insights.",
+    verbose=True
+)
+
 
 class CleaningAgent(AgentBase):
     order = 2

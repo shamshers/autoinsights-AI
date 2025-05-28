@@ -1,6 +1,16 @@
 # app/agents/data_science_agent.py
 
 from app.agents.agent_base import AgentBase
+from crewai import Agent
+
+datascience_agent = Agent(
+    name="Data Science Agent",
+    role="Statistical Analyst",
+    goal="Generate descriptive and inferential statistics from data",
+    backstory="Specialist in finding hidden patterns and summarizing trends using Python and Pandas.",
+    verbose=True
+)
+
 
 class DataScienceAgent(AgentBase):
     order = 3

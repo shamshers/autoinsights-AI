@@ -1,6 +1,8 @@
 import streamlit as st
 import requests
 import pandas as pd
+from pydantic_core.core_schema import none_schema
+import matplotlib.pyplot as plt
 
 API_URL = "http://localhost:8000/api"
 # then call /analyze/, /history/, etc.
@@ -23,10 +25,32 @@ with st.sidebar:
 # --- Upload & Analyze Section ---
 uploaded_file = st.file_uploader("Upload your CSV or Excel file", type=["csv", "xlsx"])
 user_query = st.text_input("Ask a business question (optional):", "")
+df = None
 
-if st.button("Analyze Data", disabled=not uploaded_file or not st.session_state["username"]):
+if uploaded_file:
+    if uploaded_file.name.endswith(".csv"):
+        df = pd.read_csv(uploaded_file)
+    elif uploaded_file.name.endswith(".xlsx"):
+        df = pd.read_excel(uploaded_file)
+
+    st.write("### Data Preview")
+    st.dataframe(df.head())
+
+if df is not None:
+    # List numeric columns for selection
+    numeric_columns = df.select_dtypes(include='number').columns.tolist()
+    if numeric_columns:
+        selected_col = st.selectbox("Select numeric column for Bar Chart", numeric_columns)
+    else:
+        st.warning("No numeric columns found in the uploaded file.")
+        selected_col = None
+else:
+    selected_col = None
+
+if st.button("Analyze & Show Bar Chart", disabled=not (df is not None and selected_col and username)):
     with st.spinner("Analyzing... please wait!"):
         files = {"file": (uploaded_file.name, uploaded_file.getvalue())}
+
         data = {"user_query": user_query}
         headers = {"X-User": st.session_state["username"]}
         response = requests.post(f"{API_URL}/analyze/", files=files, data=data, headers=headers)
@@ -40,12 +64,22 @@ if st.button("Analyze Data", disabled=not uploaded_file or not st.session_state[
             st.subheader("AI-Generated Insights")
             st.write(result.get("genai_summary", "No summary found."))
 
+            # if result.get("visualization_status") == "success" and result.get("chart_path"):
+            #      chart_url = f"{API_URL}/download/{result['analysis_id']}/chart"
+            #      st.image(chart_url, caption="Auto-Generated Chart")
+            with st.spinner("Generating chart..."):
+                fig, ax = plt.subplots(figsize=(10, 6))
+                df[selected_col].value_counts().plot(kind='bar', ax=ax)
+                ax.set_title(f"Bar Chart of {selected_col}")
+                ax.set_xlabel(selected_col)
+                ax.set_ylabel("Count")
+                st.pyplot(fig)
+
+                st.write("**Summary Statistics:**")
+                st.write(df[selected_col].describe())
+
             st.subheader("Exploratory Data Analysis (EDA)")
             st.json(result.get("eda_stats", {}))
-
-            if result.get("visualization_status") == "success" and result.get("chart_path"):
-                chart_url = f"{API_URL}/download/{result['analysis_id']}/chart"
-                st.image(chart_url, caption="Auto-Generated Chart")
 
             st.subheader("Downloads")
             st.markdown(
