@@ -1,0 +1,13 @@
+fastapi~=0.115.12
+pandas~=2.2.3
+fpdf~=1.7.2
+anthropic~=0.52.0
+dotenv~=0.9.9
+python-dotenv~=1.1.0
+matplotlib~=3.10.3
+langchain~=0.3.25
+streamlit~=1.45.1
+requests~=2.32.3
+pydantic_core~=2.33.2
+streamlit
+matplotlib
