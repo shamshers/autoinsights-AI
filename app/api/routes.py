@@ -13,17 +13,23 @@ from app.agents.visualization_agent import VisualizationAgent
 from app.agents.genai_insights_agent import GenAIInsightsAgent
 from app.agents.rag_retriever_agent import RAGRetrieverAgent
 from fpdf import FPDF
+from fastapi import APIRouter, UploadFile, File, Form, Request
+from fastapi.responses import JSONResponse
+from fastapi.encoders import jsonable_encoder
+import os, tempfile
+import traceback
 
 router = APIRouter()
-# --- Analyze endpoint with user and timestamp ---
+
 @router.post("/analyze/")
 async def analyze_data(
     request: Request,
     file: UploadFile = File(...),
-    user_query: Optional[str] = Form(None)
+    user_query: str = Form(None)
 ):
     user = request.headers.get("X-User", "guest")
     suffix = os.path.splitext(file.filename)[-1]
+
     with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
         tmp.write(await file.read())
         tmp_path = tmp.name
@@ -38,22 +44,42 @@ async def analyze_data(
             GenAIInsightsAgent(),
             RAGRetrieverAgent(),
         ])
+
         init_state = {"file_path": tmp_path, "user_query": user_query}
         result = pipeline.run(init_state)
+
+        if not result:
+            print("[analyze] ❌ Pipeline returned no result.")
+            return JSONResponse(content={"error": "Pipeline failed"}, status_code=500)
+
         if not result.get("genai_summary"):
             result["genai_summary"] = "❌ Summary was not generated."
-        result['original_file_name'] = file.filename
-        analysis_id = history_service.save(result, user=user)
-        result["analysis_id"] = analysis_id
+
+        result["original_file_name"] = file.filename
+        result["user"] = user
+        result["timestamp"] = str(result.get("timestamp", ""))  # Ensure it's JSON safe
+
+        try:
+            analysis_id = history_service.save(result, user=user)
+            result["analysis_id"] = analysis_id
+        except Exception as db_error:
+            print("⚠️ Error saving to history_service:", db_error)
+
         resp = {k: result.get(k) for k in [
             "analysis_id", "columns", "eda_stats", "genai_summary", "chart_path",
             "visualization_status", "rag_context", "error", "original_file_name",
-            "timestamp", "user"]}
-        return clean_json(resp)
+            "timestamp", "user"
+        ]}
+
+        print("[analyze] ✅ Returning JSON response:")
+        print(resp)
+
+        return JSONResponse(content=jsonable_encoder(resp), status_code=200)
+
     except Exception as e:
-        import traceback
-        print("INTERNAL SERVER ERROR:", traceback.format_exc())
+        print("❌ INTERNAL SERVER ERROR:\n", traceback.format_exc())
         return JSONResponse(content={"error": str(e)}, status_code=500)
+
 
 
 # --- History Endpoints ---

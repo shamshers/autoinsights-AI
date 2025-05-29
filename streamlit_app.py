@@ -60,11 +60,23 @@ if st.button("Analyze & Show Bar Chart", disabled=not (df is not None and select
         data = {"user_query": user_query}
         headers = {"X-User": st.session_state["username"]}
         response = requests.post(f"{API_URL}/analyze/", files=files, data=data, headers=headers)
+        print("📡 Response Status:", response.status_code)
+        print("📦 Raw Response:", response.text)
 
         if response.status_code == 200:
-            result = response.json()
-            st.success("Analysis complete!")
-            st.session_state["last_analysis_id"] = result["analysis_id"]
+            try:
+                result = response.json()
+                print("✅ Parsed Result:", result)
+            except requests.exceptions.JSONDecodeError:
+                st.error("❌ API returned 200 OK but no valid JSON. Check API logs.")
+                st.text("Raw Response:")
+                st.text(response.text)
+                result = None
+        else:
+            st.error(f"🚫 API Error {response.status_code}: {response.reason}")
+            st.text("Raw Response:")
+            st.text(response.text)
+            result = None
 
             # Show latest analysis results
             st.subheader("AI-Generated Insights")
@@ -99,8 +111,8 @@ if st.button("Analyze & Show Bar Chart", disabled=not (df is not None and select
                     f"[Chart (PNG)]({API_URL}/download/{result['analysis_id']}/chart)"
                 )
 
-        else:
-            st.error("Error from API: " + response.text)
+            else:
+                st.error("Error from API: " + response.text)
 
 st.markdown("---")
 
