@@ -4,7 +4,7 @@ import pandas as pd
 from pydantic_core.core_schema import none_schema
 import matplotlib.pyplot as plt
 
-API_URL = "http://localhost:8000/api"
+API_URL = "https://datinsights-ai.streamlit.app/api"
 # then call /analyze/, /history/, etc.
 
 
