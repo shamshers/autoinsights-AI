@@ -1,10 +1,9 @@
 import streamlit as st
 import requests
 import pandas as pd
-from pydantic_core.core_schema import none_schema
 import matplotlib.pyplot as plt
 
-API_URL = "http://localhost:8000/api"
+API_URL = "http://localhost:8000"
 # then call /analyze/, /history/, etc.
 
 
@@ -32,20 +31,27 @@ if uploaded_file:
         df = pd.read_csv(uploaded_file)
     elif uploaded_file.name.endswith(".xlsx"):
         df = pd.read_excel(uploaded_file)
-
-    st.write("### Data Preview")
-    st.dataframe(df.head())
-
-if df is not None:
-    # List numeric columns for selection
-    numeric_columns = df.select_dtypes(include='number').columns.tolist()
-    if numeric_columns:
-        selected_col = st.selectbox("Select numeric column for Bar Chart", numeric_columns)
     else:
-        st.warning("No numeric columns found in the uploaded file.")
-        selected_col = None
-else:
-    selected_col = None
+        st.error("Unsupported file format.")
+
+    if df is not None:
+        st.write("### Data Preview")
+        st.dataframe(df.head())
+        numeric_columns = df.select_dtypes(include='number').columns.tolist()
+        if numeric_columns:
+            selected_col = st.selectbox("Select a numeric column for Bar Chart", numeric_columns)
+            if st.button("Show Bar Chart", disabled=not (df is not None and selected_col)):
+                fig, ax = plt.subplots(figsize=(10, 6))
+                df[selected_col].value_counts().plot(kind='bar', ax=ax)
+                ax.set_title(f"Bar Chart of {selected_col}")
+                st.pyplot(fig)
+                st.write("**Summary Statistics:**")
+                st.write(df[selected_col].describe())
+        else:
+            st.warning("No numeric columns found in the uploaded file.")
+
+st.markdown("---")
+st.info("Upload a CSV/Excel file, select a column, and click 'Show Bar Chart' to see the analysis.")
 
 if st.button("Analyze & Show Bar Chart", disabled=not (df is not None and selected_col and username)):
     with st.spinner("Analyzing... please wait!"):
@@ -159,4 +165,3 @@ with st.spinner("Fetching history..."):
             st.error(f"Could not fetch history from API. Status: {resp.status_code}")
     except Exception as e:
         st.error(f"Unexpected error fetching analysis history: {e}")
-
