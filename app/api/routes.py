@@ -27,30 +27,33 @@ async def analyze_data(
     file: UploadFile = File(...),
     user_query: str = Form(None)
 ):
-    user = request.headers.get("X-User", "guest")
-    suffix = os.path.splitext(file.filename)[-1]
-
-    with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
-        tmp.write(await file.read())
-        tmp_path = tmp.name
-        print(f"[analyze] File saved to: {tmp_path}, Exists: {os.path.exists(tmp_path)}")
-
     try:
-        pipeline = OrchestratorAgent([
-            IngestionAgent(),
-            CleaningAgent(),
-            DataScienceAgent(),
-            VisualizationAgent(),
-            GenAIInsightsAgent(),
-            RAGRetrieverAgent(),
-        ])
+        user = request.headers.get("X-User", "guest")
+        suffix = os.path.splitext(file.filename)[-1]
 
-        init_state = {"file_path": tmp_path, "user_query": user_query}
-        result = pipeline.run(init_state)
+        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+            tmp.write(await file.read())
+            tmp_path = tmp.name
+            print(f"[analyze] File saved to: {tmp_path}, Exists: {os.path.exists(tmp_path)}")
+
+        try:
+            pipeline = OrchestratorAgent([
+                IngestionAgent(),
+                CleaningAgent(),
+                DataScienceAgent(),
+                VisualizationAgent(),
+                GenAIInsightsAgent(),
+                RAGRetrieverAgent(),
+            ])
+            init_state = {"file_path": tmp_path, "user_query": user_query}
+            result = pipeline.run(init_state)
+        except Exception as pipeline_error:
+            print("❌ Pipeline error:\n", traceback.format_exc())
+            return JSONResponse(content={"error": "Pipeline failed", "details": str(pipeline_error)}, status_code=500)
 
         if not result:
             print("[analyze] ❌ Pipeline returned no result.")
-            return JSONResponse(content={"error": "Pipeline failed"}, status_code=500)
+            return JSONResponse(content={"error": "Pipeline returned no result."}, status_code=500)
 
         if not result.get("genai_summary"):
             result["genai_summary"] = "❌ Summary was not generated."
@@ -64,6 +67,7 @@ async def analyze_data(
             result["analysis_id"] = analysis_id
         except Exception as db_error:
             print("⚠️ Error saving to history_service:", db_error)
+            result["analysis_id"] = None
 
         resp = {k: result.get(k) for k in [
             "analysis_id", "columns", "eda_stats", "genai_summary", "chart_path",
@@ -78,8 +82,7 @@ async def analyze_data(
 
     except Exception as e:
         print("❌ INTERNAL SERVER ERROR:\n", traceback.format_exc())
-        return JSONResponse(content={"error": str(e)}, status_code=500)
-
+        return JSONResponse(content={"error": str(e), "trace": traceback.format_exc()}, status_code=500)
 
 
 # --- History Endpoints ---
