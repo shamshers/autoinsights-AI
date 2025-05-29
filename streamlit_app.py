@@ -3,7 +3,7 @@ import requests
 import pandas as pd
 import matplotlib.pyplot as plt
 
-API_URL = "http://localhost:8000"
+API_URL = "https://autoinsights-ai.streamlit.app/api"
 # then call /analyze/, /history/, etc.
 
 
